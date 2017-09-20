@@ -129,13 +129,13 @@ def test_code(test_case):
     T6_7 = T6_7.subs(s)
 
     # Transform from base link to end effector
-    # T0_7 = simplify(T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_7)
-    T0_2 = simplify(T0_1 * T1_2)
-    T0_3 = simplify(T0_2 * T2_3)
-    T0_4 = simplify(T0_3 * T3_4)
-    T0_5 = simplify(T0_4 * T4_5)
-    T0_6 = simplify(T0_5 * T5_6)
-    T0_7 = simplify(T0_6 * T6_7)
+    T0_7 = (T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_7)
+    # T0_2 = simplify(T0_1 * T1_2)
+    # T0_3 = simplify(T0_2 * T2_3)
+    # T0_4 = simplify(T0_3 * T3_4)
+    # T0_5 = simplify(T0_4 * T4_5)
+    # T0_6 = simplify(T0_5 * T5_6)
+    # T0_7 = simplify(T0_6 * T6_7)
 
     # Extract end-effector position and orientation from request
     # px,py,pz = end-effector position
@@ -162,15 +162,15 @@ def test_code(test_case):
                   [sin(y),  cos(y), 0],
                   [     0,       0, 1]]) 
     # extrinsic rotation
-    R_zyx = simplify(R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll))  
-
-    R_Corr = simplify(R_z.subs(y,pi) * R_y.subs(p,-pi/2)) 
-    R_rpy = simplify(R_zyx *R_Corr)
+    # R_zyx = simplify(R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll))  
+    # R_Corr = simplify(R_z.subs(y,pi) * R_y.subs(p,-pi/2)) 
+    # R_rpy = simplify(R_zyx *R_Corr)
+    R_rpy = (R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll) * R_z.subs(y,pi) * R_y.subs(p,-pi/2))
 
     EE = Matrix([[px],
                  [py],
                  [pz]])
-    WC = simplify(EE - s[d7]* R_rpy[:,2])
+    WC = (EE - s[d7]* R_rpy[:,2])
 
     ## Insert IK code here!
     theta1 = atan2(WC[1],WC[0])
