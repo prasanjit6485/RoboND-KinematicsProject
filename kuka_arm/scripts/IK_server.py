@@ -170,11 +170,29 @@ def handle_calculate_IK(req):
             theta6 = atan2(-R3_6[1,1],R3_6[1,0])
     
             ###
+            # Find FK EE error
+            FK = T0_7.evalf(subs={q1:theta1, q2: theta2, q3:theta3, q4:theta4,
+                      q5:theta5, q6: theta6})
+            your_ee = [FK[0,3],FK[1,3], FK[2,3]]
+
+            if not(sum(your_ee)==3):
+                ee_x_e = abs(your_ee[0]-px)
+                ee_y_e = abs(your_ee[1]-py)
+                ee_z_e = abs(your_ee[2]-pz)
+                ee_offset = sqrt(ee_x_e**2 + ee_y_e**2 + ee_z_e**2)
+                print ("\nEnd effector error for x position is: %04.8f" % ee_x_e)
+                print ("End effector error for y position is: %04.8f" % ee_y_e)
+                print ("End effector error for z position is: %04.8f" % ee_z_e)
+                print ("Overall end effector offset is: %04.8f units \n" % ee_offset)
+                if ee_offset > 0.1:
+                  print("EE position: %04.8f,%04.8f,%04.8f" %(px,py,pz))
+                  print("EE orientation: %04.8f,%04.8f,%04.8f,%04.8f" %(req.poses[x].orientation.x,req.poses[x].orientation.y,req.poses[x].orientation.z,req.poses[x].orientation.w))
+
 		
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
-    	    joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
-    	    joint_trajectory_list.append(joint_trajectory_point)
+      	    joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
+      	    joint_trajectory_list.append(joint_trajectory_point)
 
         rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
         return CalculateIKResponse(joint_trajectory_list)
