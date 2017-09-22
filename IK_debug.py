@@ -207,9 +207,22 @@ def test_code(test_case):
 
     R3_6 = R0_3.inv("LU") * R_rpy
 
-    theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+    # theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+    # theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
+    # theta6 = atan2(-R3_6[1,1],R3_6[1,0])
+
     theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
-    theta6 = atan2(-R3_6[1,1],R3_6[1,0])
+
+    # Non-singular case
+    if abs(theta5) > 0.01:
+        theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+        theta6 = atan2(-R3_6[1,1],R3_6[1,0])
+    # Singular case
+    else:
+        theta4 = 0
+        theta6 = atan2(-R3_6[0,1],R3_6[0,0])
+
+    print(theta1, theta2, theta3, theta4, theta5, theta6)
 
     ## 
     ########################################################################################
@@ -278,6 +291,6 @@ def test_code(test_case):
 
 if __name__ == "__main__":
     # Change test case number for different scenarios
-    test_case_number = 5
+    test_case_number = 4
 
     test_code(test_cases[test_case_number])
