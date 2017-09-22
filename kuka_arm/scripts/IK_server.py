@@ -160,15 +160,45 @@ def handle_calculate_IK(req):
             theta2 =  pi/2 - angle_a -atan2(WC[2] - 0.75, sqrt(WC[0] *WC[0] +WC[1]*WC[1]) - 0.35)
             theta3 =  pi/2 - (angle_b + 0.036)  # 0.036 is sag in link4 of -0.054m
 
+            # Refer to diagram for the new variables used.
+            # l0 = sqrt(WC[0]**2 + WC[1]**2)
+            # beta1 = atan2(WC[2]-d1, l0-a1)
+            # l1 = sqrt((l0-a1)**2 + (WC[2]-d1)**2)
+            # l2 = sqrt(a3**2 + d4**2)
+            # cos_beta2 = (a2**2 + l1**2 - l2**2)/(2*a2*l1) # Using the Law of Cosines.
+            # beta2 = atan2(sqrt(1-cos_beta2**2),cos_beta2) # Using the sin, cos Pythagorean Identity.
+            # theta2 = pi/2 - beta1 - beta2
+            # theta2 = theta2.evalf(subs=s)
+
+            # ######Calculating Theta3, for the third joint.######
+
+            # beta0 = atan2(-a3,d4)
+            # cos_beta3 = (a2**2 + l2**2 - l1**2)/(2*a2*l2) # Using the Law of Cosines.
+            # beta3 = atan2(sqrt(1-cos_beta3**2),cos_beta3) # Using the sin, cos Pythagorean Identity.
+            # theta3 = pi/2 - beta3 - beta0
+            # theta3 = theta3.evalf(subs=s)
+
             R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
-            R0_3 = R0_3.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
+            R0_3_inv = R0_3.inv()
+            R0_3_inv = R0_3_inv.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
 
-            R3_6 = R0_3.inv("LU") * R_rpy
+            R3_6 = R0_3_inv * R_rpy
 
-            theta4 = atan2(R3_6[2,2], -R3_6[0,2])
-            theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
-            theta6 = atan2(-R3_6[1,1],R3_6[1,0])
-    
+            # theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+            # theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
+            # theta6 = atan2(-R3_6[1,1],R3_6[1,0])
+
+            theta5 = atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2),R3_6[1,2])
+
+            # Non-singular case
+            if abs(theta5) > 0.01:
+                theta4 = atan2(R3_6[2,2], -R3_6[0,2])
+                theta6 = atan2(-R3_6[1,1],R3_6[1,0])
+            # Singular case
+            else:
+                theta4 = 0
+                theta6 = atan2(-R3_6[0,1],R3_6[0,0])
+
             ###
             # Find FK EE error
             FK = T0_7.evalf(subs={q1:theta1, q2: theta2, q3:theta3, q4:theta4,
