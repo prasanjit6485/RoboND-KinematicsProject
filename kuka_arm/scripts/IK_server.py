@@ -210,13 +210,13 @@ def handle_calculate_IK(req):
                 ee_y_e = abs(your_ee[1]-py)
                 ee_z_e = abs(your_ee[2]-pz)
                 ee_offset = sqrt(ee_x_e**2 + ee_y_e**2 + ee_z_e**2)
-                print ("\nEnd effector error for x position is: %04.8f" % ee_x_e)
-                print ("End effector error for y position is: %04.8f" % ee_y_e)
-                print ("End effector error for z position is: %04.8f" % ee_z_e)
-                print ("Overall end effector offset is: %04.8f units \n" % ee_offset)
+                rospy.loginfo("End effector error for x position is: %04.8f" % ee_x_e)
+                rospy.loginfo("End effector error for y position is: %04.8f" % ee_y_e)
+                rospy.loginfo("End effector error for z position is: %04.8f" % ee_z_e)
+                rospy.loginfo("Overall end effector offset is: %04.8f units \n" % ee_offset)
                 if ee_offset > 0.1:
-                  print("EE position: %04.8f,%04.8f,%04.8f" %(px,py,pz))
-                  print("EE orientation: %04.8f,%04.8f,%04.8f,%04.8f" %(req.poses[x].orientation.x,req.poses[x].orientation.y,req.poses[x].orientation.z,req.poses[x].orientation.w))
+                  rospy.loginfo("EE position: %04.8f,%04.8f,%04.8f" %(px,py,pz))
+                  rospy.loginfo("EE orientation: %04.8f,%04.8f,%04.8f,%04.8f" %(req.poses[x].orientation.x,req.poses[x].orientation.y,req.poses[x].orientation.z,req.poses[x].orientation.w))
 
 		
             # Populate response for the IK request

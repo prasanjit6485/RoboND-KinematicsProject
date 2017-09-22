@@ -203,9 +203,10 @@ def test_code(test_case):
     theta3 =  pi/2 - (angle_b + 0.036)  # 0.036 is sag in link4 of -0.054m
 
     R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
-    R0_3 = R0_3.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
+    R0_3_inv = R0_3.inv()
+    R0_3_inv = R0_3_inv.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
 
-    R3_6 = R0_3.inv("LU") * R_rpy
+    R3_6 = R0_3_inv * R_rpy
 
     # theta4 = atan2(R3_6[2,2], -R3_6[0,2])
     # theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
@@ -221,8 +222,6 @@ def test_code(test_case):
     else:
         theta4 = 0
         theta6 = atan2(-R3_6[0,1],R3_6[0,0])
-
-    print(theta1, theta2, theta3, theta4, theta5, theta6)
 
     ## 
     ########################################################################################
@@ -284,7 +283,7 @@ def test_code(test_case):
         print ("\nEnd effector error for x position is: %04.8f" % ee_x_e)
         print ("End effector error for y position is: %04.8f" % ee_y_e)
         print ("End effector error for z position is: %04.8f" % ee_z_e)
-        print ("Overall end effector offset is: %04.8f units \n" % ee_offset)
+        print ("Overall end effector offset is: %.15f units \n" % ee_offset)
 
 
 
