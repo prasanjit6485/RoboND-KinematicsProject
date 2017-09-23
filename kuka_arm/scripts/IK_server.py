@@ -18,6 +18,50 @@ from geometry_msgs.msg import Pose
 from mpmath import *
 from sympy import *
 
+ERR_ANALYSIS = True
+
+class ErrorAnalysis:
+    """ErrorAnalysis
+
+    Attributes:
+        ee_cal_pos: list of End-Effector calculate position from computation for the plan
+        ee_act_pos: list of End-Effector actual position from request for the plan
+        len_req_pose: length of eef-poses from the plan
+        ee_offset: list of end-effector offsets for the plan
+    """
+    def __init__(self, len_req_pose = 0):
+        self.ee_cal_pos = []
+        self.ee_act_pos = []
+        self.len_req_pose = len_req_pose
+        self.ee_offset = []
+
+    def append_ee_positions(self,EE_Cal_Pos,EE_Act_Pos):
+        self.ee_cal_pos.append(EE_Cal_Pos)
+        self.ee_act_pos.append(EE_Act_Pos)
+
+    def print_error_analysis_data(self):
+        if (self.len_req_pose != len(self.ee_cal_pos)) or (self.len_req_pose != len(self.ee_cal_pos)):
+            rospy.logerr("Error printing error analysis data")
+            return None
+        
+        rospy.loginfo("Printing %s end-effector offsets:" % self.len_req_pose)
+        for idx in range(self.len_req_pose):
+            print("Pose %02d - Overall End-Effector offset is: %.15f units" % (idx+1,self.ee_offset[idx]))
+
+        rospy.loginfo("Printing %s end-effector (cal,act) positions:" % self.len_req_pose)
+        for idx in range(self.len_req_pose):
+            print(self.ee_cal_pos[idx])
+            print(self.ee_act_pos[idx])
+
+    def root_mean_square_error(self,EE_Cal_Pos,EE_Act_Pos):
+        if len(EE_Cal_Pos) == 3 and len(EE_Act_Pos) == 3:
+            ee_x_e = abs(EE_Cal_Pos[0]-EE_Act_Pos[0])
+            ee_y_e = abs(EE_Cal_Pos[1]-EE_Act_Pos[1])
+            ee_z_e = abs(EE_Cal_Pos[2]-EE_Act_Pos[2])
+            ee_offset = sqrt(ee_x_e**2 + ee_y_e**2 + ee_z_e**2)
+            self.ee_offset.append(ee_offset)
+        else:
+            rospy.logerr("End-Effector position are not of length 3")
 
 def handle_calculate_IK(req):
     rospy.loginfo("Received %s eef-poses from the plan" % len(req.poses))
@@ -26,6 +70,10 @@ def handle_calculate_IK(req):
         return -1
     else:
 		
+        # Create an object for error analysis
+        if ERR_ANALYSIS:
+            errAnalysis = ErrorAnalysis(len(req.poses))
+
         ### Your FK code here
         ### Create symbols for joint variables
         q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
@@ -160,24 +208,6 @@ def handle_calculate_IK(req):
             theta2 =  pi/2 - angle_a -atan2(WC[2] - 0.75, sqrt(WC[0] *WC[0] +WC[1]*WC[1]) - 0.35)
             theta3 =  pi/2 - (angle_b + 0.036)  # 0.036 is sag in link4 of -0.054m
 
-            # Refer to diagram for the new variables used.
-            # l0 = sqrt(WC[0]**2 + WC[1]**2)
-            # beta1 = atan2(WC[2]-d1, l0-a1)
-            # l1 = sqrt((l0-a1)**2 + (WC[2]-d1)**2)
-            # l2 = sqrt(a3**2 + d4**2)
-            # cos_beta2 = (a2**2 + l1**2 - l2**2)/(2*a2*l1) # Using the Law of Cosines.
-            # beta2 = atan2(sqrt(1-cos_beta2**2),cos_beta2) # Using the sin, cos Pythagorean Identity.
-            # theta2 = pi/2 - beta1 - beta2
-            # theta2 = theta2.evalf(subs=s)
-
-            # ######Calculating Theta3, for the third joint.######
-
-            # beta0 = atan2(-a3,d4)
-            # cos_beta3 = (a2**2 + l2**2 - l1**2)/(2*a2*l2) # Using the Law of Cosines.
-            # beta3 = atan2(sqrt(1-cos_beta3**2),cos_beta3) # Using the sin, cos Pythagorean Identity.
-            # theta3 = pi/2 - beta3 - beta0
-            # theta3 = theta3.evalf(subs=s)
-
             R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
             R0_3_inv = R0_3.inv()
             R0_3_inv = R0_3_inv.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
@@ -199,31 +229,26 @@ def handle_calculate_IK(req):
                 theta4 = 0
                 theta6 = atan2(-R3_6[0,1],R3_6[0,0])
 
-            ###
-            # Find FK EE error
-            FK = T0_7.evalf(subs={q1:theta1, q2: theta2, q3:theta3, q4:theta4,
-                      q5:theta5, q6: theta6})
-            your_ee = [FK[0,3],FK[1,3], FK[2,3]]
+            ## Error analysis
+            if ERR_ANALYSIS:
+                # Find FK EE error
+                FK = T0_7.evalf(subs={q1:theta1, q2: theta2, q3:theta3, q4:theta4,
+                          q5:theta5, q6: theta6})
 
-            if not(sum(your_ee)==3):
-                ee_x_e = abs(your_ee[0]-px)
-                ee_y_e = abs(your_ee[1]-py)
-                ee_z_e = abs(your_ee[2]-pz)
-                ee_offset = sqrt(ee_x_e**2 + ee_y_e**2 + ee_z_e**2)
-                rospy.loginfo("End effector error for x position is: %04.8f" % ee_x_e)
-                rospy.loginfo("End effector error for y position is: %04.8f" % ee_y_e)
-                rospy.loginfo("End effector error for z position is: %04.8f" % ee_z_e)
-                rospy.loginfo("Overall end effector offset is: %04.8f units \n" % ee_offset)
-                if ee_offset > 0.1:
-                  rospy.loginfo("EE position: %04.8f,%04.8f,%04.8f" %(px,py,pz))
-                  rospy.loginfo("EE orientation: %04.8f,%04.8f,%04.8f,%04.8f" %(req.poses[x].orientation.x,req.poses[x].orientation.y,req.poses[x].orientation.z,req.poses[x].orientation.w))
-
+                # Compute RMSE
+                # Populate RMSE and end-effector positions
+                errAnalysis.root_mean_square_error([FK[0,3],FK[1,3], FK[2,3]],[px,py,pz])
+                errAnalysis.append_ee_positions([FK[0,3],FK[1,3], FK[2,3]],[px,py,pz])
 		
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
       	    joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
       	    joint_trajectory_list.append(joint_trajectory_point)
 
+        # Print error analysis report
+        if ERR_ANALYSIS:
+            errAnalysis.print_error_analysis_data()
+            
         rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
         return CalculateIKResponse(joint_trajectory_list)
 
