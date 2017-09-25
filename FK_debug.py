@@ -83,3 +83,9 @@ print(T3_6)
 T1_4 = simplify(T1_2 * T2_3 * T3_4)
 
 print(T1_4)
+
+# Compute inverse of R0_3 rotation matrix
+R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
+R0_3_inv = R0_3.inv()
+
+print(R0_3_inv)

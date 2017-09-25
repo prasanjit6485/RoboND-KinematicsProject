@@ -17,8 +17,9 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Pose
 from mpmath import *
 from sympy import *
+from time import time
 
-ERR_ANALYSIS = True
+ERR_ANALYSIS = False
 
 class ErrorAnalysis:
     """ErrorAnalysis
@@ -69,13 +70,15 @@ def handle_calculate_IK(req):
         print "No valid poses received"
         return -1
     else:
-		
+        # Start timer for the plan
+        start_time = time()
+
         # Create an object for error analysis
         if ERR_ANALYSIS:
             errAnalysis = ErrorAnalysis(len(req.poses))
 
         ### Your FK code here
-        ### Create symbols for joint variables
+        # Create symbols for joint variables
         q1, q2, q3, q4, q5, q6, q7 = symbols('q1:8')
         d1, d2, d3, d4, d5, d6, d7 = symbols('d1:8')
         a0, a1, a2, a3, a4, a5, a6 = symbols('a0:7')
@@ -98,7 +101,7 @@ def handle_calculate_IK(req):
              alpha5: -pi/2,  a5:   0, d6:   0,
              alpha6:     0,  a6:   0, d7: d67, q7: 0}
 
-        #### Homogeneous Transforms
+        # Homogeneous Transforms
         T0_1 = Matrix([[             cos(q1),            -sin(q1),            0,              a0],
                        [ sin(q1)*cos(alpha0), cos(q1)*cos(alpha0), -sin(alpha0), -sin(alpha0)*d1],
                        [ sin(q1)*sin(alpha0), cos(q1)*sin(alpha0),  cos(alpha0),  cos(alpha0)*d1],
@@ -141,8 +144,23 @@ def handle_calculate_IK(req):
                        [                   0,                   0,            0,               1]])
         T6_7 = T6_7.subs(s)
 
-        # Transform from base link to end effector
-        T0_7 = (T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_7)
+        # Transform from base link to end effector, required for error analysis
+        if ERR_ANALYSIS:
+          T0_7 = (T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_7)
+
+        # Compute correctional rotation matrix
+        R_corr_y = Matrix([[cos(-pi/2), 0, sin(-pi/2)],
+                           [         0, 1,          0],
+                           [-sin(-pi/2),0,cos(-pi/2)]]) 
+        R_corr_z = Matrix([[cos(pi), -sin(pi), 0],
+                           [sin(pi),  cos(pi), 0],
+                           [      0,        0, 1]])
+        R_corr = R_corr_z * R_corr_y
+
+        # Compute inverse of rotation matrix from link 0 to link 3 by extracting 
+        # rotational part from HT
+        R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
+        R0_3_inv_g = R0_3.inv()
 
         # Initialize service response
         joint_trajectory_list = []
@@ -150,9 +168,9 @@ def handle_calculate_IK(req):
             # IK code starts here
             joint_trajectory_point = JointTrajectoryPoint()
 
-      	    # Extract end-effector position and orientation from request
-      	    # px,py,pz = end-effector position
-      	    # roll, pitch, yaw = end-effector orientation
+            # Extract end-effector position and orientation from request
+            # px,py,pz = end-effector position
+            # roll, pitch, yaw = end-effector orientation
             px = req.poses[x].position.x
             py = req.poses[x].position.y
             pz = req.poses[x].position.z
@@ -161,8 +179,8 @@ def handle_calculate_IK(req):
                 [req.poses[x].orientation.x, req.poses[x].orientation.y,
                     req.poses[x].orientation.z, req.poses[x].orientation.w])
      
-            ### Your IK code here 
-            ## correction needed to account of orientation difference between defintion 
+            # Compute rotational matrix between base link and gripper link
+            # Correction needed to account of orientation difference between defintion 
             # of Grippper link in URDF versus DH Convention
             r, p, y = symbols('r p y')
 
@@ -175,15 +193,16 @@ def handle_calculate_IK(req):
             R_z = Matrix([[cos(y), -sin(y), 0],
                           [sin(y),  cos(y), 0],
                           [     0,       0, 1]]) 
-            # extrinsic rotation
-            R_rpy = (R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll) * R_z.subs(y,pi) * R_y.subs(p,-pi/2))
 
+            R_rpy = (R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll) * R_corr)
+
+            # Compute wrist center position
             EE = Matrix([[px],
                          [py],
                          [pz]])
             WC = (EE - s[d7]* R_rpy[:,2])
 
-            ## Insert IK code here!
+            # Compute theta1, theta2 and theta3
             theta1 = atan2(WC[1],WC[0])
 
             side_a = 1.501
@@ -198,8 +217,8 @@ def handle_calculate_IK(req):
             theta2 =  pi/2 - angle_a -atan2(WC[2] - 0.75, sqrt(WC[0] *WC[0] +WC[1]*WC[1]) - 0.35)
             theta3 =  pi/2 - (angle_b + 0.036)  # 0.036 is sag in link4 of -0.054m
 
-            R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
-            R0_3_inv = R0_3.inv()
+            # Compute theta4, theta5 and theta6
+            R0_3_inv = R0_3_inv_g
             R0_3_inv = R0_3_inv.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
 
             R3_6 = R0_3_inv * R_rpy
@@ -215,7 +234,7 @@ def handle_calculate_IK(req):
                 theta4 = 0
                 theta6 = atan2(-R3_6[0,1],R3_6[0,0])
 
-            ## Error analysis
+            # Error analysis
             if ERR_ANALYSIS:
                 # Find FK EE error
                 FK = T0_7.evalf(subs={q1:theta1, q2: theta2, q3:theta3, q4:theta4,
@@ -225,16 +244,18 @@ def handle_calculate_IK(req):
                 # Populate RMSE and end-effector positions
                 errAnalysis.root_mean_square_error([FK[0,3],FK[1,3], FK[2,3]],[px,py,pz])
                 errAnalysis.append_ee_positions([FK[0,3],FK[1,3], FK[2,3]],[px,py,pz])
-		
+    
             # Populate response for the IK request
             # In the next line replace theta1,theta2...,theta6 by your joint angle variables
-      	    joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
-      	    joint_trajectory_list.append(joint_trajectory_point)
+            joint_trajectory_point.positions = [theta1, theta2, theta3, theta4, theta5, theta6]
+            joint_trajectory_list.append(joint_trajectory_point)
 
         # Print error analysis report
         if ERR_ANALYSIS:
             errAnalysis.print_error_analysis_data()
-            
+        
+        # Stop the timer for the plan
+        rospy.loginfo("Total run time to calculate joint angles from pose is %04.4f seconds" % (time()-start_time))
         rospy.loginfo("length of Joint Trajectory List: %s" % len(joint_trajectory_list))
         return CalculateIKResponse(joint_trajectory_list)
 
