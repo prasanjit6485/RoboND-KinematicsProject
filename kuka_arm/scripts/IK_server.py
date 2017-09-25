@@ -143,13 +143,6 @@ def handle_calculate_IK(req):
 
         # Transform from base link to end effector
         T0_7 = (T0_1 * T1_2 * T2_3 * T3_4 * T4_5 * T5_6 * T6_7)
-        # T0_2 = simplify(T0_1 * T1_2)
-        # T0_3 = simplify(T0_2 * T2_3)
-        # T0_4 = simplify(T0_3 * T3_4)
-        # T0_5 = simplify(T0_4 * T4_5)
-        # T0_6 = simplify(T0_5 * T5_6)
-        # T0_7 = simplify(T0_6 * T6_7)
-        ###
 
         # Initialize service response
         joint_trajectory_list = []
@@ -157,9 +150,9 @@ def handle_calculate_IK(req):
             # IK code starts here
             joint_trajectory_point = JointTrajectoryPoint()
 
-	    # Extract end-effector position and orientation from request
-	    # px,py,pz = end-effector position
-	    # roll, pitch, yaw = end-effector orientation
+      	    # Extract end-effector position and orientation from request
+      	    # px,py,pz = end-effector position
+      	    # roll, pitch, yaw = end-effector orientation
             px = req.poses[x].position.x
             py = req.poses[x].position.y
             pz = req.poses[x].position.z
@@ -169,7 +162,7 @@ def handle_calculate_IK(req):
                     req.poses[x].orientation.z, req.poses[x].orientation.w])
      
             ### Your IK code here 
-	        ## correction needed to account of orientation difference between defintion 
+            ## correction needed to account of orientation difference between defintion 
             # of Grippper link in URDF versus DH Convention
             r, p, y = symbols('r p y')
 
@@ -183,9 +176,6 @@ def handle_calculate_IK(req):
                           [sin(y),  cos(y), 0],
                           [     0,       0, 1]]) 
             # extrinsic rotation
-            # R_zyx = simplify(R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll))  
-            # R_Corr = simplify(R_z.subs(y,pi) * R_y.subs(p,-pi/2)) 
-            # R_rpy = simplify(R_zyx *R_Corr)
             R_rpy = (R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll) * R_z.subs(y,pi) * R_y.subs(p,-pi/2))
 
             EE = Matrix([[px],
@@ -214,14 +204,10 @@ def handle_calculate_IK(req):
 
             R3_6 = R0_3_inv * R_rpy
 
-            # theta4 = atan2(R3_6[2,2], -R3_6[0,2])
-            # theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
-            # theta6 = atan2(-R3_6[1,1],R3_6[1,0])
-
             theta5 = atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2),R3_6[1,2])
 
             # Non-singular case
-            if abs(theta5) > 0.01:
+            if sin(theta5) > 0:
                 theta4 = atan2(R3_6[2,2], -R3_6[0,2])
                 theta6 = atan2(-R3_6[1,1],R3_6[1,0])
             # Singular case
