@@ -19,7 +19,7 @@ from mpmath import *
 from sympy import *
 from time import time
 
-ERR_ANALYSIS = True
+ERR_ANALYSIS = False
 
 class ErrorAnalysis:
     """ErrorAnalysis

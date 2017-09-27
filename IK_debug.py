@@ -157,7 +157,8 @@ def test_code(test_case):
         [req.poses[x].orientation.x, req.poses[x].orientation.y,
             req.poses[x].orientation.z, req.poses[x].orientation.w]) 
 
-    ## correction needed to account of orientation difference between defintion 
+    # Compute rotational matrix between base link and gripper link
+    # Correction needed to account of orientation difference between defintion 
     # of Grippper link in URDF versus DH Convention
     r, p, y = symbols('r p y')
 
@@ -173,33 +174,36 @@ def test_code(test_case):
     # extrinsic rotation
     R_rpy = (R_z.subs(y,yaw) *R_y.subs(p,pitch) * R_x.subs(r,roll) * R_z.subs(y,pi) * R_y.subs(p,-pi/2))
 
+    # Compute wrist center position using eq.(1)
     EE = Matrix([[px],
                  [py],
                  [pz]])
     WC = (EE - s[d7]* R_rpy[:,2])
 
-    ## Insert IK code here!
+    # Compute theta1 using eq.(2)
     theta1 = atan2(WC[1],WC[0])
 
-    side_a = 1.501
-    side_b = sqrt(pow((sqrt(WC[0] *WC[0] + WC[1]*WC[1])-0.35),2) +
-                      pow((WC[2]-0.75),2))
-    side_c = 1.25
+    # Compute theta2 & theta3 using eq.(3)
+    tc = sqrt(WC[0]**2 + WC[1]**2)
+    alpha = atan2(WC[2] - d01, tc - a12)
+    sb = sqrt((tc-a12)**2 + (WC[2]-d01)**2)
 
-    angle_a = acos((side_b*side_b + side_c*side_c -side_a*side_a)/(2*side_b*side_c))
-    angle_b = acos((side_a*side_a + side_c*side_c -side_b*side_b)/(2*side_a*side_c))
-    angle_c = acos((side_a*side_a + side_b*side_b -side_c*side_c)/(2*side_a*side_b))
+    angle_a = acos((a23**2 + sb**2 - (d34+0.001)**2)/(2*a23*sb))
+    angle_b = acos((a23**2 + (d34+0.001)**2 - sb**2)/(2*a23*(d34+0.001)))
 
-    theta2 =  pi/2 - angle_a -atan2(WC[2] - 0.75, sqrt(WC[0] *WC[0] +WC[1]*WC[1]) - 0.35)
+    theta2 =  pi/2 - angle_a - alpha
     theta3 =  pi/2 - (angle_b + 0.036)  # 0.036 is sag in link4 of -0.054m
 
+    # Compute theta4, theta5 and theta6 using eq.(5) & eq.(6)
+    # Compute inverse of rotation matrix from link 0 to link 3 by extracting 
+    # rotational part from HT
     R0_3 = T0_1[0:3,0:3] * T1_2[0:3,0:3] * T2_3[0:3,0:3]
     R0_3_inv = R0_3.inv()
     R0_3_inv = R0_3_inv.evalf(subs= {q1:theta1, q2:theta2, q3:theta3})
 
     R3_6 = R0_3_inv * R_rpy
 
-    theta5 = atan2(sqrt(R3_6[0,2]*R3_6[0,2] + R3_6[2,2]*R3_6[2,2]),R3_6[1,2])
+    theta5 = atan2(sqrt(R3_6[0,2]**2 + R3_6[2,2]**2),R3_6[1,2])
 
     # Non-singular case
     if sin(theta5) > 0:
