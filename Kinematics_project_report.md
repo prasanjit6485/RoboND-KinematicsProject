@@ -7,6 +7,8 @@
 [image3]: ./misc_images/misc2.png
 [kinematicdiagram]:./misc_images/KinematicDiagram.png
 [dh-table]:./misc_images/dh-table.png
+[inversekinematics]:./misc_images/inversekinematics.png
+
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/972/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
@@ -29,9 +31,7 @@ I am submitting the writeup as markdown and You're reading it!
 
 #### 3. Decouple Inverse Kinematics problem into Inverse Position Kinematics and inverse Orientation Kinematics; doing so derive the equations to calculate all individual joint angles.
 
-And here's where you can draw out and show your math for the derivation of your theta angles. 
-
-![alt text][image2]
+![alt text][inversekinematics]
 
 ### Project Implementation
 
