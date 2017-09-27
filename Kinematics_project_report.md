@@ -38,10 +38,9 @@ I am submitting the writeup as markdown and You're reading it!
 #### 1. Fill in the `IK_server.py` file with properly commented python code for calculating Inverse Kinematics based on previously performed Kinematic Analysis. Your code must guide the robot to successfully complete 8/10 pick and place cycles. Briefly discuss the code you implemented and your results. 
 
 
-Here I'll talk about the code, what techniques I used, what worked and why, where the implementation might fail and how I might improve it if I were going to pursue this project further.  
+`IK_server.py` code is well commented and self explanatory.
 
-
-And just for fun, another example image:
+Added image with 10/10 pick and place cycles.
 ![alt text][image3]
 
 
