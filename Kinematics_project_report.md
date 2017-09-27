@@ -2,7 +2,7 @@
 
 [//]: # (Image References)
 
-[image1]:/misc_images/misc2.png
+[image1]:./misc_images/misc2.png
 [kinematicdiagram]:./misc_images/KinematicDiagram.png
 [dhtable]:./misc_images/dhtable.png
 [inversekinematics]:./misc_images/inversekinematics.png
