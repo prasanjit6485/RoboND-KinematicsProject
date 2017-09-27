@@ -7,7 +7,7 @@
 [image3]: ./misc_images/misc2.png
 [kinematicdiagram]:./misc_images/KinematicDiagram.png
 [dhtable]:./misc_images/dhtable.png
-[inversekinematics]:./misc_images/inversekinematics.png
+[inversekinematics]:./misc_images/inverse_kinematics.png
 
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/972/view) Points
